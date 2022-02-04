@@ -5,7 +5,7 @@ import io.circe.generic.semiauto._
 import io.circe.syntax.*
 import time.helpers.{dateTimeDecoder, dateTimeEncoder}
 
-case class Topic(name: String, questions: List[Question] = List.empty)
+case class Topic(name: String, questions: List[Question] = List.empty, subtopics: List[Topic] = List.empty)
 
 object Topic {
   given topicEncoder: Encoder[Topic] = deriveEncoder[Topic]

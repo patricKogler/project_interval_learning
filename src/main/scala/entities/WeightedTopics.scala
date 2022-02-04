@@ -14,7 +14,5 @@ case class WeightedTopics(weightedTopics: List[TopicWithWeightedIntervalQuestion
           stringBuilder.append(s"${current}) ${topic.name} (${topic.questions.count(_.shouldReviewNow)}) \n")
           helper(tail, stringBuilder, current + 1)
       }
-
     helper(weightedTopics, stringBuilder, 0).toString()
-
 }
