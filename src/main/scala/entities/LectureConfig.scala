@@ -1,3 +1,6 @@
 package entities
 
-case class LectureConfig()
+import org.joda.time.DateTime
+
+case class LectureConfig(name: String, difficulty: Difficulty, examDate: DateTime)
+

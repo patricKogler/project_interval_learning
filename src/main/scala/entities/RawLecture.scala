@@ -1,3 +1,3 @@
 package entities
 
-case class RawLecture()
+case class RawLecture(lectureConfig: LectureConfig, rawTopics: List[RawTopic])

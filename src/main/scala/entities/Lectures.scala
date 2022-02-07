@@ -1,3 +1,3 @@
 package entities
 
-case class Lectures()
+case class Lectures(lectures: List[Lecture])

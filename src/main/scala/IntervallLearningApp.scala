@@ -33,13 +33,13 @@ object IntervallLearningApp extends zio.App {
   val userReviewServiceLayer = (Console.live ++ topicsRepoLayer) >>> UserReviewServiceLive.layer
 
   def logicLayer =
-    ZLayer.identity[Console] ++ indexQuestionsLayer ++ weightedTopicsLayer ++ UserSelectionServiceLive.layer ++ userReviewServiceLayer
+    ZLayer.identity[Console] ++ indexQuestionsLayer ++ weightedTopicsLayer ++ UserSelectionServiceLive.layer ++ userReviewServiceLayer ++ zio.blocking.Blocking.live
 
   override def run(args: List[String]) =
     logic.provideLayer(logicLayer).exitCode
 
-  def logic: ZIO[Console with Has[UserReviewService] with Has[UserSelectionService] with Has[WeightedTopicsService] with Has[IndexQuestions], Throwable, Unit] = for {
-    _ <- putStrLn("Indexing Questions...")
+  def logic: ZIO[zio.blocking.Blocking with Console with Has[UserReviewService] with Has[UserSelectionService] with Has[WeightedTopicsService] with Has[IndexQuestions], Throwable, Unit] = for {
+    _ <- Command("notify-send", "--urgency=critical", "Indexing Questions...").exitCode
     _ <- IndexQuestions.indexQuestions
     _ <- putStrLn("Weighing Questions...")
     weightedTopics <- WeightedTopicsService.getWeightedTopics

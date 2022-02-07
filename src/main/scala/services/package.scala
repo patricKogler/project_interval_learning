@@ -100,8 +100,7 @@ package object services {
             else question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Wrong))), topic.name)
           _ <- console.putStrLn("Next question [Y] / n")
           stop <- console.getStrLn.map(_.toLowerCase == "n")
-          _ <- console.putStrLn(next.toString())
-          _ <- if stop then console.putStrLn("thx") else qHelper(next, topic)
+          _ <- qHelper(next, topic).when(!stop)
         } yield stop
         case Nil => Task.effect(false)
       }
@@ -111,7 +110,6 @@ package object services {
           case ::(topic, next) => for {
             _ <- console.putStrLn(s"Next Topic: ${topic.name}")
             stop <- qHelper(topic.questions, topic)
-            _ <- console.putStrLn(stop.toString)
             _ <- helper(next).when(!stop)
           } yield ()
           case Nil => Task.unit
