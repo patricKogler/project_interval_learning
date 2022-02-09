@@ -8,7 +8,7 @@ import org.scalatest.matchers._
 class LectureSpec extends AnyFlatSpec with should.Matchers {
 
   val dateTime: DateTime = DateTime.parse("22.02.2022 15:30", DateTimeFormat.forPattern("d.M.Y H:m"))
-  val testLectureConfig: LectureConfig = LectureConfig("Test", Difficulty.Medium, dateTime)
+  val testLectureConfig: LectureConfig = LectureConfig("Test", AnswerState.Good, dateTime)
 
   "A lecture" should "not change if RawLecture is not different" in {
 
@@ -16,7 +16,7 @@ class LectureSpec extends AnyFlatSpec with should.Matchers {
     val lecture = Lecture(testLectureConfig,
       List(
         Topic("Test", List(
-          Question("q1", List(Answered(dateTime.minusDays(50), AnswerResult.Correct(Difficulty.Medium)))),
+          Question("q1", List(Answered(dateTime.minusDays(50), AnswerState.Good))),
           Question("q2"),
           Question("q3")
         )),
@@ -31,7 +31,7 @@ class LectureSpec extends AnyFlatSpec with should.Matchers {
     val lecture = Lecture(testLectureConfig,
       List(
         Topic("Test", List(
-          Question("q1", List(Answered(dateTime.minusDays(50), AnswerResult.Correct(Difficulty.Medium)))),
+          Question("q1", List(Answered(dateTime.minusDays(50), AnswerState.Good))),
           Question("q2"),
           Question("q3")
         )),
@@ -41,14 +41,14 @@ class LectureSpec extends AnyFlatSpec with should.Matchers {
     val updateLecture = Lecture(testLectureConfig,
       List(
         Topic("Test", List(
-          Question("q1", List(Answered(dateTime.minusDays(50), AnswerResult.Correct(Difficulty.Medium)))),
+          Question("q1", List(Answered(dateTime.minusDays(50), AnswerState.Good))),
           Question("q2"),
           Question("q3")
         )),
         Topic("Test2", List(Question("q1"), Question("q3")))
       ))
     lecture shouldNot equal(lecture.update(rawLecture))
-    lecture.update(rawLecture) should equal (updateLecture)
+    lecture.update(rawLecture) should equal(updateLecture)
 
   }
 }

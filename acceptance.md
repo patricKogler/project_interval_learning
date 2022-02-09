@@ -1,6 +1,6 @@
 ## Lectures
 
-**given:** A Folder with a *lecture.conf* file  
+**given:** A Folder with a *lecture.json* file  
 **when:** There is/are one or mulitple *\*.questions.(md|txt)* file(s) in the same or in sub-folders  
 **then:** only those questions should be asked
 
@@ -41,3 +41,4 @@
 ## Difficulty
 
 > maybe like Anki (again, good, easy) 
+> x² + 5 = 6² 

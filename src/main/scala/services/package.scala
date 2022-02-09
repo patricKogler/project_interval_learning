@@ -1,4 +1,4 @@
-import entities.{AnswerResult, Answered, Difficulty, Question, Topic, TopicWithWeightedIntervalQuestions, Topics, WeightedInterval, WeightedTopics}
+import entities.{AnswerResult, Answered, AnswerState, Question, Topic, TopicWithWeightedIntervalQuestions, Topics, WeightedInterval, WeightedTopics}
 import mappers.TopicMapper
 import org.joda.time.DateTime
 import providers.interval.IntervalProvider
@@ -13,39 +13,12 @@ import java.io.IOException
 import scala.io.StdIn.readLine
 import scala.util.matching.Regex
 
-
 package object services {
-
-  object topics {
-    trait WeightedTopicsService {
-      def getWeightedTopics: Task[WeightedTopics]
-    }
-
-    case class WeightedTopicsServiceLive(topicsRepo: TopicsRepo, intervalProvider: IntervalProvider) extends WeightedTopicsService {
-      override def getWeightedTopics: Task[WeightedTopics] = topicsRepo.getTopics.flatMap { topics =>
-        Task
-          .foreach(topics.topics)(topic =>
-            Task.foreach(topic.questions)(intervalProvider.getWeightedInterval)
-              .map(q => TopicWithWeightedIntervalQuestions(topic.name, q.filter(_.shouldReviewNow))))
-          .map(t => WeightedTopics(t.filter(_.questions.nonEmpty)))
-      }
-    }
-
-    object WeightedTopicsServiceLive {
-      def layer: RLayer[Has[TopicsRepo] with Has[IntervalProvider], Has[WeightedTopicsService]] = (WeightedTopicsServiceLive(_, _)).toLayer
-    }
-
-    object WeightedTopicsService {
-      def getWeightedTopics: RIO[Has[WeightedTopicsService], WeightedTopics] = ZIO.serviceWith[WeightedTopicsService](_.getWeightedTopics)
-    }
-
-  }
 
   object selection {
     trait UserSelectionService {
       def getUserSelection(weightedTopics: WeightedTopics): Task[Topics]
     }
-
 
     case class UserSelectionServiceLive() extends UserSelectionService {
 
@@ -76,65 +49,65 @@ package object services {
     }
   }
 
-  object review {
-    trait UserReviewService {
-      def reviewQuestions(topics: Topics): Task[Unit]
-    }
-
-    case class UserReviewServiceLive(topicsRepo: TopicsRepo, console: Console.Service) extends UserReviewService {
-
-      import scala.sys.process._
-
-      private def qHelper(questions: List[Question], topic: Topic): Task[Boolean] = questions match {
-        case ::(question, next) => for {
-          _ <- console.putStrLn("c for correct and w for wrong")
-          _ <- console.putStrLn(question.question)
-          correct <- console.getStrLn.map(_.toLowerCase() == "c")
-          difficult <- if correct then for {
-            _ <- console.putStrLn("How difficult was the question from 1 - 3")
-            dif <- console.getStrLn
-          } yield dif else console.putStrLn("")
-          _ <- topicsRepo.updateQuestion(
-            if correct then
-              getDifficulty(question, difficult)
-            else question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Wrong))), topic.name)
-          _ <- console.putStrLn("Next question [Y] / n")
-          stop <- console.getStrLn.map(_.toLowerCase == "n")
-          _ <- qHelper(next, topic).when(!stop)
-        } yield stop
-        case Nil => Task.effect(false)
-      }
-
-      private def helper(topics: List[Topic]): Task[Unit] =
-        topics match {
-          case ::(topic, next) => for {
-            _ <- console.putStrLn(s"Next Topic: ${topic.name}")
-            stop <- qHelper(topic.questions, topic)
-            _ <- helper(next).when(!stop)
-          } yield ()
-          case Nil => Task.unit
-        }
-
-
-      override def reviewQuestions(topics: Topics): Task[Unit] = helper(topics.topics)
-
-      private def getDifficulty(question: Question, difficult: Any) = {
-        difficult match {
-          case "1" => question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Correct(Difficulty.Low))))
-          case "2" => question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Correct(Difficulty.Medium))))
-          case _ => question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Correct(Difficulty.High))))
-        }
-      }
-    }
-
-    object UserReviewServiceLive {
-      def layer: ZLayer[Has[TopicsRepo] with Console, Throwable, Has[UserReviewService]] = (UserReviewServiceLive(_, _)).toLayer
-    }
-
-    object UserReviewService {
-      def reviewQuestions(topics: Topics): ZIO[Has[UserReviewService], Throwable, Unit] = ZIO.serviceWith[UserReviewService](_.reviewQuestions(topics))
-    }
-  }
+//  object review {
+//    trait UserReviewService {
+//      def reviewQuestions(topics: Topics): Task[Unit]
+//    }
+//
+//    case class UserReviewServiceLive(topicsRepo: TopicsRepo, console: Console.Service) extends UserReviewService {
+//
+//      import scala.sys.process._
+//
+//      private def qHelper(questions: List[Question], topic: Topic): Task[Boolean] = questions match {
+//        case ::(question, next) => for {
+//          _ <- console.putStrLn("c for correct and w for wrong")
+//          _ <- console.putStrLn(question.question)
+//          correct <- console.getStrLn.map(_.toLowerCase() == "c")
+//          difficult <- if correct then for {
+//            _ <- console.putStrLn("How difficult was the question from 1 - 3")
+//            dif <- console.getStrLn
+//          } yield dif else console.putStrLn("")
+//          _ <- topicsRepo.updateQuestion(
+//            if correct then
+//              getDifficulty(question, difficult)
+//            else question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Wrong))), topic.name)
+//          _ <- console.putStrLn("Next question [Y] / n")
+//          stop <- console.getStrLn.map(_.toLowerCase == "n")
+//          _ <- qHelper(next, topic).when(!stop)
+//        } yield stop
+//        case Nil => Task.effect(false)
+//      }
+//
+//      private def helper(topics: List[Topic]): Task[Unit] =
+//        topics match {
+//          case ::(topic, next) => for {
+//            _ <- console.putStrLn(s"Next Topic: ${topic.name}")
+//            stop <- qHelper(topic.questions, topic)
+//            _ <- helper(next).when(!stop)
+//          } yield ()
+//          case Nil => Task.unit
+//        }
+//
+//
+//      override def reviewQuestions(topics: Topics): Task[Unit] = Task.unit
+//
+//      private def getDifficulty(question: Question, difficult: Any) = {
+//        difficult match {
+//          case "1" => question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Correct(AnswerState.Low))))
+//          case "2" => question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Correct(AnswerState.Medium))))
+//          case _ => question.copy(history = question.history.appended(Answered(DateTime.now(), AnswerResult.Correct(AnswerState.High))))
+//        }
+//      }
+//    }
+//
+//    object UserReviewServiceLive {
+//      def layer: ZLayer[Has[TopicsRepo] with Console, Throwable, Has[UserReviewService]] = (UserReviewServiceLive(_, _)).toLayer
+//    }
+//
+//    object UserReviewService {
+//      def reviewQuestions(topics: Topics): ZIO[Has[UserReviewService], Throwable, Unit] = ZIO.serviceWith[UserReviewService](_.reviewQuestions(topics))
+//    }
+//  }
 
 
 }

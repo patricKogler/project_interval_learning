@@ -1,9 +1,22 @@
 package entities
 
-case class Lecture(lectureConfig: LectureConfig, topics: List[Topic]) {
-  def update(rawLecture: RawLecture): Lecture = Lecture(rawLecture.lectureConfig, rawLecture.rawTopics.map { rawTopic =>
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.{Decoder, Encoder}
+import org.joda.time.DateTime
+import time.helpers.{dateTimeEncoder, dateTimeDecoder}
+
+import java.util.UUID
+
+case class Lecture(lectureConfig: LectureConfig, topics: List[Topic] = List.empty, createdAt: DateTime = DateTime.now(), id: UUID = UUID.randomUUID()) {
+  def update(rawLecture: RawLecture): Lecture = this.copy(rawLecture.lectureConfig, rawLecture.rawTopics.map { rawTopic =>
     topics.find(_.name == rawTopic.name)
       .map(topic => topic.copy(questions = rawTopic.questions.map(rq => topic.questions.find(_.question == rq).getOrElse(Question(rq)))))
       .getOrElse(rawTopic.toTopic)
   })
+}
+
+object Lecture {
+  given lectureEncoder: Encoder[Lecture] = deriveEncoder[Lecture]
+
+  given lectureDecoder: Decoder[Lecture] = deriveDecoder[Lecture]
 }

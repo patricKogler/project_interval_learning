@@ -1,4 +1,4 @@
-import entities.{Question, Topic, Topics}
+import entities.{Lectures, Question, Topic, Topics}
 import io.circe.jawn.decode
 import io.circe.{Decoder, Encoder}
 import providers.path.PathProvider
@@ -18,11 +18,11 @@ package object repos {
     }
 
     case class TopicsRepoLive(pathProvider: PathProvider)(using encoder: Encoder[Topics])(using decoder: Decoder[Topics]) extends TopicsRepo {
-      override def saveTopics(toSave: Topics): Task[Unit] = pathProvider.getTopicsFile.map { saveTo =>
+      override def saveTopics(toSave: Topics): Task[Unit] = pathProvider.getLecturesFile.map { saveTo =>
         os.write.over(saveTo, encoder(toSave).toString)
       }
 
-      override def getTopics: Task[Topics] = pathProvider.getTopicsFile.map { saveTo =>
+      override def getTopics: Task[Topics] = pathProvider.getLecturesFile.map { saveTo =>
         if os.exists(saveTo) then decode[Topics](os.read(saveTo)).getOrElse(Topics(List.empty))
         else Topics(List.empty)
       }
@@ -54,5 +54,7 @@ package object repos {
       def getTopics: ZIO[Has[TopicsRepo], Throwable, Topics] = ZIO.serviceWith[TopicsRepo](_.getTopics)
     }
   }
+
+ 
 
 }

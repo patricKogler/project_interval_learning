@@ -1,5 +1,5 @@
 package entities
 
 enum AnswerResult:
-  case Correct(difficulty: Difficulty)
+  case Correct(difficulty: AnswerState)
   case Wrong
