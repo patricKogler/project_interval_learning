@@ -13,6 +13,10 @@ case class Lecture(lectureConfig: LectureConfig, topics: List[Topic] = List.empt
       .map(topic => topic.copy(questions = rawTopic.questions.map(rq => topic.questions.find(_.question == rq).getOrElse(Question(rq)))))
       .getOrElse(rawTopic.toTopic)
   })
+  
+  def getAllQuestions: List[Question] = topics.flatMap(_.getAllQuestions)
+
+  def filterByQuestion(filterFn: (Question, LectureConfig) => Boolean): Lecture = this.copy(topics = topics.map(_.filterQuestions(filterFn, lectureConfig)).filter(_.questions.nonEmpty))
 }
 
 object Lecture {

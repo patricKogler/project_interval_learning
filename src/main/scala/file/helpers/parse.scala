@@ -1,6 +1,7 @@
 package file.helpers
 
 import entities.{LectureConfig, RawLecture, RawTopic}
+import io.circe.jawn.decode
 import os.Path
 import providers.path.PathProvider
 import zio.{Has, Task, ZIO, ZLayer}
@@ -44,7 +45,7 @@ object parse {
       if str.startsWith("#") then Task.succeed(str)
       else Task.fail(new Throwable(s"could not parse file in lecture Folder $lectureFolder expected # but got ${str.take(5)}..."))
     }).map { topicsAndQuestions =>
-      linesToRawTopics(topicsAndQuestions.toList.flatMap(_.split("\n\n").toList))
+      linesToRawTopics(topicsAndQuestions.toList.flatMap(_.split("\n\n").toList.map(_.strip()).filter(_.nonEmpty)))
     }
 
     private def linesToRawTopics(lines: List[String]): List[RawTopic] =
@@ -59,7 +60,6 @@ object parse {
       }).mapping.map((k, v) => RawTopic(k, v)).toList
 
     override def parseRawLectures: Task[List[RawLecture]] = findLectureFolders.flatMap { paths =>
-      println(paths)
       Task.foreach(paths) { path =>
         for {
           config <- getLectureConfigFromFolder(path)

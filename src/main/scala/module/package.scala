@@ -1,5 +1,5 @@
 import entities.Lecture
-import .parse.Parse
+import file.helpers.parse.Parse
 import repos.lectures.LecturesRepo
 import repos.topics.TopicsRepo
 import zio.{Has, Task, ZLayer}

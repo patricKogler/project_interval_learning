@@ -1,4 +1,4 @@
-import .parse.{Parse, ParseLive}
+import file.helpers.parse.{Parse, ParseLive}
 import repos.topics.{TopicsRepo, TopicsRepoLive}
 import io.circe.Encoder
 import zio.{ExitCode, Has, IO, RIO, Schedule, Task, ULayer, URIO, ZEnv, ZIO, ZLayer}
@@ -9,12 +9,11 @@ import io.circe.generic.semiauto.*
 import io.circe.syntax.*
 import io.circe.parser.decode
 import entities.{Question, Topic}
-import providers.interval.{IntervalProvider, IntervalProviderLive}
 import providers.path.PathProviderLive
-import repos.lectures.LecturesRepoLive
-import services.review.{UserReviewService, UserReviewServiceLive}
-import services.selection.{UserSelectionService, UserSelectionServiceLive}
-import services.topics.{WeightedTopicsService, WeightedTopicsServiceLive}
+import repos.lectures.{LecturesRepo, LecturesRepoLive}
+import services.question.QuestionServiceLive
+import services.topic.review.{UserReviewService, UserReviewServiceLive}
+import services.topic.selection.{UserSelection, UserSelectionLive}
 import zio.process.Command
 
 import scala.io.AnsiColor.*
@@ -26,29 +25,31 @@ object IntervallLearningApp extends zio.App {
 
   private val topicsRepoLayer = PathProviderLive.layer >>> TopicsRepoLive.layer
   private val lecturesRepoLayer = PathProviderLive.layer >>> LecturesRepoLive.layer
-  val indexQuestionsLayer =
+  private val indexQuestionsLayer =
     (lecturesRepoLayer
       ++ (PathProviderLive.layer >>> ParseLive.layer)) >>>
       IndexLecturesLive.layer
+  private val userSelectionLayer = Console.live >>> UserSelectionLive.layer
+  private val questionServiceLayer = lecturesRepoLayer >>> QuestionServiceLive.layer
+  private val userReviewServiceLayer = (Console.live ++ questionServiceLayer) >>> UserReviewServiceLive.layer
 
-  val weightedTopicsLayer = (topicsRepoLayer ++ IntervalProviderLive.layer) >>> WeightedTopicsServiceLive.layer
-
-  val userReviewServiceLayer = (Console.live ++ topicsRepoLayer) >>> UserReviewServiceLive.layer
 
   def logicLayer =
-    ZLayer.identity[Console] ++ indexQuestionsLayer ++ weightedTopicsLayer ++ UserSelectionServiceLive.layer ++ userReviewServiceLayer ++ zio.blocking.Blocking.live
+    ZLayer.identity[Console] ++ indexQuestionsLayer ++ zio.blocking.Blocking.live ++ lecturesRepoLayer ++ userSelectionLayer ++ userReviewServiceLayer
 
   override def run(args: List[String]) =
     logic.provideLayer(logicLayer).exitCode
 
-  def logic: ZIO[zio.blocking.Blocking with Console with Has[UserReviewService] with Has[UserSelectionService] with Has[WeightedTopicsService] with Has[IndexLectures], Throwable, Unit] = for {
+  def logic: ZIO[zio.blocking.Blocking with Console with Has[IndexLectures] with Has[LecturesRepo] with Has[UserSelection] with Has[UserReviewService], Throwable, Unit] = for {
     _ <- putStrLn("Indexing Lectures...")
     _ <- IndexLectures.indexLectures
     _ <- putStrLn("Weighing Questions...")
     _ <- putStrLn("\u001b[H")
-    weightedTopics <- WeightedTopicsService.getWeightedTopics
-    topicsToReview <- UserSelectionService.getUserSelection(weightedTopics.copy(weightedTopics.weightedTopics.filter(_.questions.exists(_.shouldReviewNow))))
-    _: ExitCode <- UserReviewService.reviewQuestions(topicsToReview).exitCode
+    lecturesToReview <- LecturesRepo.getAllLectures.map(_.filterByQuestion { (question, config) =>
+      helpers.question.nextLearningDate(question, config).isBeforeNow
+    })
+    _ <- if lecturesToReview.lectures.nonEmpty
+    then UserSelection.getSelection(lecturesToReview).flatMap(UserReviewService.review)
+    else putStrLn("Nothing to review")
   } yield ()
-
 }

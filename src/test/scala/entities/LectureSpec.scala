@@ -8,7 +8,7 @@ import org.scalatest.matchers._
 class LectureSpec extends AnyFlatSpec with should.Matchers {
 
   val dateTime: DateTime = DateTime.parse("22.02.2022 15:30", DateTimeFormat.forPattern("d.M.Y H:m"))
-  val testLectureConfig: LectureConfig = LectureConfig("Test", AnswerState.Good, dateTime)
+  val testLectureConfig: LectureConfig = LectureConfig("Test",  dateTime)
 
   "A lecture" should "not change if RawLecture is not different" in {
 

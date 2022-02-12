@@ -2,7 +2,7 @@ package services
 
 import entities.Question
 import repos.lectures.LecturesRepo
-import zio.Task
+import zio.{Has, Task, ZLayer}
 
 object question {
   trait QuestionService {
@@ -14,5 +14,9 @@ object question {
       lectures <- lecturesRepo.getAllLectures
       _ <- lecturesRepo.saveLectures(lectures.updateQuestion(question))
     } yield ()
+  }
+  
+  object QuestionServiceLive {
+    def layer: ZLayer[Has[LecturesRepo], Nothing, Has[QuestionService]] = ZLayer.fromService(QuestionServiceLive(_))
   }
 }
