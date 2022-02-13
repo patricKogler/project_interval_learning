@@ -11,6 +11,8 @@ object lectures {
     def saveLectures(lectures: Lectures): Task[Unit]
 
     def getAllLectures: Task[Lectures]
+
+    def getAllLecturesToReview: Task[Lectures]
   }
 
   case class LecturesRepoLive(pathProvider: PathProvider)(using encoder: Encoder[Lectures]) extends LecturesRepo {
@@ -23,6 +25,13 @@ object lectures {
       file <- pathProvider.getLecturesFile
       lectures <- Task.succeed(decode[Lectures](os.read(file)).getOrElse(Lectures()))
     } yield lectures
+
+    override def getAllLecturesToReview: Task[Lectures] = for {
+      ls <- getAllLectures
+      lecturesToReview = ls.lectures.map(_.filterByQuestion { (question, config) =>
+        helpers.question.nextLearningDate(question, config).isBeforeNow
+      })
+    } yield Lectures(lecturesToReview)
   }
 
   object LecturesRepoLive {
@@ -33,5 +42,7 @@ object lectures {
     def saveLectures(lectures: Lectures): ZIO[Has[LecturesRepo], Throwable, Unit] = ZIO.serviceWith[LecturesRepo](_.saveLectures(lectures))
 
     def getAllLectures: ZIO[Has[LecturesRepo], Throwable, Lectures] = ZIO.serviceWith[LecturesRepo](_.getAllLectures)
+
+    def getAllLecturesToReview: ZIO[Has[LecturesRepo], Throwable, Lectures] = ZIO.serviceWith[LecturesRepo](_.getAllLecturesToReview)
   }
 }

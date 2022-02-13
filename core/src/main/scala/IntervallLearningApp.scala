@@ -14,6 +14,7 @@ import repos.lectures.{LecturesRepo, LecturesRepoLive}
 import services.question.QuestionServiceLive
 import services.topic.review.{UserReviewService, UserReviewServiceLive}
 import services.topic.selection.{UserSelection, UserSelectionLive}
+import zio.blocking.Blocking
 import zio.process.Command
 
 import scala.io.AnsiColor.*
@@ -38,7 +39,24 @@ object IntervallLearningApp extends zio.App {
     ZLayer.identity[Console] ++ indexQuestionsLayer ++ zio.blocking.Blocking.live ++ lecturesRepoLayer ++ userSelectionLayer ++ userReviewServiceLayer
 
   override def run(args: List[String]) =
-    logic.provideLayer(logicLayer).exitCode
+    args.headOption match {
+      case Some(value) => value match {
+        case "index" => indexLectures.provideLayer(zio.blocking.Blocking.live ++ indexQuestionsLayer).exitCode
+        case "remind" => remindToStudy.provideLayer(zio.blocking.Blocking.live ++ indexQuestionsLayer ++ lecturesRepoLayer).exitCode
+      }
+      case None => logic.provideLayer(logicLayer).exitCode
+    }
+
+  def indexLectures: ZIO[Blocking with Has[IndexLectures], Throwable, Unit] = for {
+    _ <- IndexLectures.indexLectures
+    _ <- Command("notify-send", "Indexed Lectures").exitCode
+  } yield ()
+
+  def remindToStudy: ZIO[Blocking with Has[LecturesRepo] with Has[IndexLectures], Throwable, Unit] = for {
+    _ <- IndexLectures.indexLectures
+    ls <- LecturesRepo.getAllLecturesToReview
+    _ <- Command("notify-send", s"You have ${ls.lectures.map(_.getAllQuestions.length).sum} questions to review!").exitCode.when(ls.lectures.flatMap(_.getAllQuestions).nonEmpty)
+  } yield ()
 
   def logic: ZIO[zio.blocking.Blocking with Console with Has[IndexLectures] with Has[LecturesRepo] with Has[UserSelection] with Has[UserReviewService], Throwable, Unit] = for {
     _ <- putStrLn("Indexing Lectures...")
