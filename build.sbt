@@ -25,15 +25,3 @@ lazy val core = (project in file("./core"))
     )
   ).dependsOn(shared)
 
-
-lazy val server = (project in file("./server"))
-  .settings(
-    name := "server",
-    scalaVersion := "3.1.1",
-    libraryDependencies ++= Seq(
-      "io.d11" %% "zhttp" % "2.0.0-RC3",
-      "io.d11" %% "zhttp-test" % "2.0.0-RC3" % Test,
-      "dev.zio" %% "zio-test" % "2.0.0-RC2",
-      "dev.zio" %% "zio-json" % "0.3.0-RC3",
-    )
-  ).dependsOn(shared)
