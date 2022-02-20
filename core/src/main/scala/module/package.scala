@@ -1,19 +1,18 @@
 import entities.Lecture
 import file.helpers.parse.Parse
 import repos.lectures.LecturesRepo
-import repos.topics.TopicsRepo
-import zio.{Has, Task, ZLayer}
+//import repos.topics.TopicsRepo
 import zio.*
 
 package object module {
 
   object index {
     trait IndexLectures {
-      def indexLectures: Task[Unit]
+      def indexLectures: IO[String, Unit]
     }
 
     case class IndexLecturesLive(parser: Parse, lecturesRepo: LecturesRepo) extends IndexLectures {
-      override def indexLectures: Task[Unit] = for {
+      override def indexLectures: IO[String, Unit] = for {
         rawLectures <- parser.parseRawLectures
         oldLectures <- lecturesRepo.getAllLectures
         _ <- lecturesRepo.saveLectures(oldLectures.update(rawLectures))
@@ -21,11 +20,11 @@ package object module {
     }
 
     object IndexLecturesLive {
-      def layer: URLayer[Has[Parse] with Has[LecturesRepo], Has[IndexLectures]] = (IndexLecturesLive(_, _)).toLayer
+      def layer: ZLayer[Parse with LecturesRepo, String, IndexLectures] = (IndexLecturesLive(_, _)).toLayer
     }
 
     object IndexLectures {
-      def indexLectures: RIO[Has[IndexLectures], Unit] = ZIO.serviceWith[IndexLectures](_.indexLectures)
+      def indexLectures: ZIO[IndexLectures, String, Unit] = ZIO.serviceWithZIO[IndexLectures](_.indexLectures)
     }
   }
 

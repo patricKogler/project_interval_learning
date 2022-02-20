@@ -2,8 +2,8 @@ package services.topic
 
 import entities.{Lecture, LectureConfig, Lectures, Question, Topic}
 import helpers.question.getQuestionWeight
-import zio.{Has, Task, ZIO, ZLayer}
-import zio.console.{Console, putStrLn}
+import zio.*
+import zio.Console.printLine
 
 import java.util.UUID
 import scala.annotation.tailrec
@@ -12,10 +12,10 @@ import scala.io.AnsiColor.*
 
 object selection {
   trait UserSelection {
-    def getSelection(lectures: Lectures): Task[Lectures]
+    def getSelection(lectures: Lectures): IO[String, Lectures]
   }
 
-  case class UserSelectionLive(console: Console.Service) extends UserSelection {
+  case class UserSelectionLive(console: Console) extends UserSelection {
 
     private type LectureList = List[(String, UUID, List[(String, UUID)])]
 
@@ -81,12 +81,12 @@ object selection {
       }
     }
 
-    override def getSelection(lectures: Lectures): Task[Lectures] = for {
-      _ <- console.putStrLn("select by typing either \"a\" for all or 0, 1.2, 1.1, .... for specific topics or whole lectures")
+    override def getSelection(lectures: Lectures): IO[String, Lectures] = for {
+      _ <- console.printLine("select by typing either \"a\" for all or 0, 1.2, 1.1, .... for specific topics or whole lectures").mapError(_.toString)
       s = lecturesToString(lectures)
-      _ <- console.putStrLn(s)
-      selection <- console.getStrLn.map(s => filterBySelectionString(s, lectures))
-      _ <- console.putStrLn(selection.toString())
+      _ <- console.printLine(s).mapError(_.toString)
+      selection <- console.readLine.mapBoth(_.toString, s => filterBySelectionString(s, lectures))
+      _ <- console.printLine(selection.toString()).mapError(_.toString)
     } yield lectures.filterByQuestion((q, _) => selection.flatMap({
       case lecture: Lecture => lecture.topics.flatMap(_.getAllQuestions)
       case topic: Topic => topic.getAllQuestions
@@ -94,10 +94,10 @@ object selection {
   }
 
   object UserSelectionLive {
-    def layer: ZLayer[Console, Throwable, Has[UserSelection]] = ZLayer.fromService(UserSelectionLive(_))
+    def layer: ZLayer[Console, String, UserSelection] = (UserSelectionLive(_)).toLayer[UserSelection]
   }
 
   object UserSelection {
-    def getSelection(lectures: Lectures) = ZIO.serviceWith[UserSelection](_.getSelection(lectures))
+    def getSelection(lectures: Lectures): ZIO[UserSelection, String, Lectures] = ZIO.serviceWithZIO[UserSelection](_.getSelection(lectures))
   }
 }

@@ -1,7 +1,6 @@
 package entities
 
-import io.circe.{Decoder, Encoder}
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import zio.json.*
 import Lecture.{lectureDecoder, lectureEncoder}
 
 import scala.annotation.tailrec
@@ -43,7 +42,7 @@ case class Lectures(lectures: List[Lecture] = List.empty) {
 }
 
 object Lectures {
-  given lecturesEncoder: Encoder[Lectures] = deriveEncoder[Lectures]
+  given lecturesEncoder: JsonEncoder[Lectures] = DeriveJsonEncoder.gen[Lectures]
 
-  given lecturesDecoder: Decoder[Lectures] = deriveDecoder[Lectures]
+  given lecturesDecoder: JsonDecoder[Lectures] = DeriveJsonDecoder.gen[Lectures]
 }

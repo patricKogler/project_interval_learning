@@ -1,14 +1,14 @@
 package file.helpers
 
 import entities.{LectureConfig, RawLecture, RawTopic}
-import io.circe.jawn.decode
 import os.Path
 import providers.path.PathProvider
-import zio.{Has, Task, ZIO, ZLayer}
+import zio.*
+import zio.json.*
 
 object parse {
   sealed trait Parse {
-    def parseRawLectures: Task[List[RawLecture]]
+    def parseRawLectures: IO[String, List[RawLecture]]
   }
 
   case class ParseLive(pathProvider: PathProvider) extends Parse {
@@ -23,15 +23,15 @@ object parse {
       def map(f: ((String, List[String])) => (String, List[String])): ParserHelper = this.copy(mapping = mapping.map(f))
     }
 
-    private def findLectureFolders: ZIO[Any, Throwable, List[Path]] = pathProvider.getBasePath.map { baseDir =>
+    private def findLectureFolders: IO[String, List[Path]] = pathProvider.getBasePath.map { baseDir =>
       os.walk(baseDir)
         .filter(_.last.matches("lecture.json"))
         .map(_ / os.up)
         .toList
     }
 
-    private def getLectureConfigFromFolder(lectureFolder: Path): Task[LectureConfig] =
-      ZIO.fromTry(decode[LectureConfig](os.read(lectureFolder / "lecture.json")).toTry)
+    private def getLectureConfigFromFolder(lectureFolder: Path): IO[String, LectureConfig] =
+      ZIO.fromEither(os.read(lectureFolder / "lecture.json").fromJson[LectureConfig])
 
     private def getQuestionFiles(path: Path): List[Path] =
       os.walk(path)
@@ -39,11 +39,11 @@ object parse {
         .filter(_.last.matches("questions.(md|txt)$"))
 
 
-    private def parseRawTopics(lectureFolder: Path): Task[List[RawTopic]] = Task.foreach(os.walk(lectureFolder)
+    private def parseRawTopics(lectureFolder: Path): IO[String, List[RawTopic]] = IO.foreach(os.walk(lectureFolder)
       .filter(_.last.matches("questions.(md|txt)$"))
       .map(os.read))(str => {
       if str.startsWith("#") then Task.succeed(str)
-      else Task.fail(new Throwable(s"could not parse file in lecture Folder $lectureFolder expected # but got ${str.take(5)}..."))
+      else IO.fail(s"could not parse file in lecture Folder $lectureFolder expected # but got ${str.take(5)}...")
     }).map { topicsAndQuestions =>
       linesToRawTopics(topicsAndQuestions.toList.flatMap(_.split("\n\n").toList.map(_.strip()).filter(_.nonEmpty)))
     }
@@ -59,8 +59,8 @@ object parse {
           lastOption.map(k => helper.map(kv => if k == kv._1 then (kv._1, kv._2.appended(line)) else kv)).getOrElse(helper)
       }).mapping.map((k, v) => RawTopic(k, v)).toList
 
-    override def parseRawLectures: Task[List[RawLecture]] = findLectureFolders.flatMap { paths =>
-      Task.foreach(paths) { path =>
+    override def parseRawLectures: IO[String, List[RawLecture]] = findLectureFolders.flatMap { paths =>
+      IO.foreach(paths) { path =>
         for {
           config <- getLectureConfigFromFolder(path)
           topics <- parseRawTopics(path)
@@ -70,10 +70,10 @@ object parse {
   }
 
   object ParseLive {
-    def layer: ZLayer[Has[PathProvider], Any, Has[Parse]] = ZLayer.fromService(ParseLive(_))
+    def layer: URLayer[PathProvider, Parse] = (ParseLive(_)).toLayer[Parse]
   }
 
   object Parse {
-    def parseRawLectures: ZIO[Has[Parse], Throwable, List[RawLecture]] = ZIO.serviceWith[Parse](_.parseRawLectures)
+    def parseRawLectures: ZIO[Parse, String, List[RawLecture]] = ZIO.serviceWithZIO[Parse](_.parseRawLectures)
   }
 }

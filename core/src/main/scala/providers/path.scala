@@ -2,15 +2,15 @@ package providers
 
 import com.typesafe.config.ConfigFactory
 import os.Path
-import zio.{Has, Task, ULayer, ZLayer}
+import zio.*
 
 object path {
   trait PathProvider {
-    def getBasePath: Task[Path]
+    def getBasePath: IO[String, Path]
 
-    def getQuestionsDir: Task[Path]
+    def getQuestionsDir: IO[String, Path]
 
-    def getLecturesFile: Task[Path]
+    def getLecturesFile: IO[String, Path]
   }
 
   case class PathProviderLive() extends PathProvider {
@@ -19,28 +19,28 @@ object path {
     private lazy val questionsDir = baseDir / "_questions"
     private lazy val lecturesFile = questionsDir / "lectures.json"
 
-    override def getBasePath: Task[Path] = Task.effect(baseDir)
+    override def getBasePath: IO[String, Path] = IO.attempt(baseDir).mapError(_.toString)
 
-    override def getQuestionsDir: Task[Path] = for {
+    override def getQuestionsDir: IO[String, Path] = for {
       basePath <- getBasePath
-      qdir <- Task.effect {
+      qdir <- IO.attempt {
         if !os.exists(questionsDir) then os.makeDir(questionsDir)
         questionsDir
-      }
+      }.mapError(_.toString)
     } yield qdir
 
-    override def getLecturesFile: Task[Path] = for {
+    override def getLecturesFile: IO[String, Path] = for {
       _ <- getQuestionsDir
-      topics <- Task.effect {
+      topics <- Task.attempt {
         if os.exists(lecturesFile) then lecturesFile
         else
           os.write(lecturesFile, "")
           lecturesFile
-      }
+      }.mapError(_.toString)
     } yield topics
   }
 
   object PathProviderLive {
-    def layer: ULayer[Has[PathProvider]] = ZLayer.succeed(PathProviderLive())
+    def layer: ULayer[PathProvider] = ZLayer.succeed(PathProviderLive())
   }
 }

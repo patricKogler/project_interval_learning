@@ -2,21 +2,21 @@ package services
 
 import entities.Question
 import repos.lectures.LecturesRepo
-import zio.{Has, Task, ZLayer}
+import zio.*
 
 object question {
   trait QuestionService {
-    def updateQuestion(question: Question): Task[Unit]
+    def updateQuestion(question: Question): IO[String, Unit]
   }
 
   case class QuestionServiceLive(lecturesRepo: LecturesRepo) extends QuestionService {
-    override def updateQuestion(question: Question): Task[Unit] = for {
+    override def updateQuestion(question: Question): IO[String, Unit] = for {
       lectures <- lecturesRepo.getAllLectures
       _ <- lecturesRepo.saveLectures(lectures.updateQuestion(question))
     } yield ()
   }
-  
+
   object QuestionServiceLive {
-    def layer: ZLayer[Has[LecturesRepo], Nothing, Has[QuestionService]] = ZLayer.fromService(QuestionServiceLive(_))
+    def layer: ZLayer[LecturesRepo, String, QuestionService] = (QuestionServiceLive(_)).toLayer[QuestionService]
   }
 }

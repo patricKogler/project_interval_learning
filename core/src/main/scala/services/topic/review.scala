@@ -3,17 +3,17 @@ package services.topic
 import entities.{AnswerState, Lectures, Question, Topic}
 import services.question.QuestionService
 import zio.*
-import zio.console.Console
-import helpers.question.*
+import zio.Console
+import helpers.question.{nextLearningDate, getQuestionWeight}
 
 import scala.annotation.tailrec
 
 object review {
   trait UserReviewService {
-    def review(lectures: Lectures): Task[Unit]
+    def review(lectures: Lectures): IO[String, Unit]
   }
 
-  case class UserReviewServiceLive(console: Console.Service, questionService: QuestionService) extends UserReviewService {
+  case class UserReviewServiceLive(console: Console, questionService: QuestionService) extends UserReviewService {
 
     private def getQuestionsByWeight(lectures: Lectures): List[Question] = lectures.lectures.flatMap(l => l.getAllQuestions.map(q => (q, l.lectureConfig)))
       .sortBy((q, c) => getQuestionWeight(q, c)).reverse.map(_._1)
@@ -43,40 +43,40 @@ object review {
       questionService.updateQuestion(updatedQ)
     }
 
-    def questionAsker(lectures: Lectures): Task[Unit] = {
+    def questionAsker(lectures: Lectures): IO[String, Unit] = {
       val questions = getQuestionsByWeight(lectures)
 
-      def clear = console.putStrLn("\u001b[2J")
+      def clear = console.printLine("\u001b[2J").mapError(_.toString)
 
-      def helper(questions: List[Question]): Task[Unit] = {
+      def helper(questions: List[Question]): IO[String, Unit] = {
         questions match {
           case head :: next => for {
-            _ <- console.putStrLn(getQuestionStringWithPath(lectures, head))
-            _ <- console.putStrLn("Again    Hard    Good    Easy")
-            _ <- console.putStrLn("  1        2       3       4 ")
-            answer <- console.getStrLn
+            _ <- console.printLine(getQuestionStringWithPath(lectures, head)).mapError(_.toString)
+            _ <- console.printLine("Again    Hard    Good    Easy").mapError(_.toString)
+            _ <- console.printLine("  1        2       3       4 ").mapError(_.toString)
+            answer <- console.readLine.mapError(_.toString)
             _ <- saveAnswer(answer, head)
             _ <- clear
-            _ <- console.putStrLn("Next Question? [y]/n").when(next.nonEmpty)
-            nextQuestion <- if next.nonEmpty then console.getStrLn.map(_ != "n") else Task.succeed(false)
+            _ <- console.printLine("Next Question? [y]/n").when(next.nonEmpty).mapError(_.toString)
+            nextQuestion <- if next.nonEmpty then console.readLine.mapBoth(_.toString, _ != "n") else IO.succeed(false)
             _ <- clear
             _ <- helper(next).when(nextQuestion)
           } yield ()
-          case Nil => Task.unit
+          case Nil => IO.unit
         }
       }
 
       helper(questions)
     }
 
-    override def review(lectures: Lectures): Task[Unit] = questionAsker(lectures)
+    override def review(lectures: Lectures): IO[String, Unit] = questionAsker(lectures)
   }
 
   object UserReviewServiceLive {
-    def layer: ZLayer[Console with Has[QuestionService], Throwable, Has[UserReviewService]] = (UserReviewServiceLive(_, _)).toLayer
+    def layer: ZLayer[Console with QuestionService, Throwable, UserReviewService] = (UserReviewServiceLive(_, _)).toLayer
   }
 
   object UserReviewService {
-    def review(lectures: Lectures): ZIO[Has[UserReviewService], Throwable, Unit] = ZIO.serviceWith[UserReviewService](_.review(lectures))
+    def review(lectures: Lectures): ZIO[UserReviewService, String, Unit] = ZIO.serviceWithZIO[UserReviewService](_.review(lectures))
   }
 }

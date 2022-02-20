@@ -1,32 +1,32 @@
 package repos
 
 import entities.Lectures
-import io.circe.jawn.decode
-import io.circe.{Decoder, Encoder}
+import entities.Lectures.{lecturesDecoder, lecturesEncoder}
+import zio.json.*
 import providers.path.PathProvider
-import zio.{Has, Task, ZIO, ZLayer}
+import zio.*
 
 object lectures {
   trait LecturesRepo {
-    def saveLectures(lectures: Lectures): Task[Unit]
+    def saveLectures(lectures: Lectures): IO[String, Unit]
 
-    def getAllLectures: Task[Lectures]
+    def getAllLectures: IO[String, Lectures]
 
-    def getAllLecturesToReview: Task[Lectures]
+    def getAllLecturesToReview: IO[String, Lectures]
   }
 
-  case class LecturesRepoLive(pathProvider: PathProvider)(using encoder: Encoder[Lectures]) extends LecturesRepo {
-    override def saveLectures(lectures: Lectures): Task[Unit] = for {
+  case class LecturesRepoLive(pathProvider: PathProvider)(using encoder: JsonEncoder[Lectures]) extends LecturesRepo {
+    override def saveLectures(lectures: Lectures): IO[String, Unit] = for {
       file <- pathProvider.getLecturesFile
-      _ <- Task.succeed(os.write.over(file, encoder(lectures).toString))
+      _ <- Task.succeed(os.write.over(file, lectures.toJson))
     } yield ()
 
-    override def getAllLectures: Task[Lectures] = for {
+    override def getAllLectures: IO[String, Lectures] = for {
       file <- pathProvider.getLecturesFile
-      lectures <- Task.succeed(decode[Lectures](os.read(file)).getOrElse(Lectures()))
+      lectures <- Task.succeed(os.read(file).fromJson[Lectures].getOrElse(Lectures()))
     } yield lectures
 
-    override def getAllLecturesToReview: Task[Lectures] = for {
+    override def getAllLecturesToReview: IO[String, Lectures] = for {
       ls <- getAllLectures
       lecturesToReview = ls.lectures.map(_.filterByQuestion { (question, config) =>
         helpers.question.nextLearningDate(question, config).isBeforeNow
@@ -35,14 +35,14 @@ object lectures {
   }
 
   object LecturesRepoLive {
-    def layer(using encoder: Encoder[Lectures]): ZLayer[Has[PathProvider], Nothing, Has[LecturesRepo]] = ZLayer.fromService(LecturesRepoLive(_))
+    def layer(using encoder: JsonEncoder[Lectures]): ZLayer[PathProvider, String, LecturesRepo] = ZLayer.fromService(LecturesRepoLive(_))
   }
 
   object LecturesRepo {
-    def saveLectures(lectures: Lectures): ZIO[Has[LecturesRepo], Throwable, Unit] = ZIO.serviceWith[LecturesRepo](_.saveLectures(lectures))
+    def saveLectures(lectures: Lectures): ZIO[LecturesRepo, String, Unit] = ZIO.serviceWithZIO[LecturesRepo](_.saveLectures(lectures))
 
-    def getAllLectures: ZIO[Has[LecturesRepo], Throwable, Lectures] = ZIO.serviceWith[LecturesRepo](_.getAllLectures)
+    def getAllLectures: ZIO[LecturesRepo, String, Lectures] = ZIO.serviceWithZIO[LecturesRepo](_.getAllLectures)
 
-    def getAllLecturesToReview: ZIO[Has[LecturesRepo], Throwable, Lectures] = ZIO.serviceWith[LecturesRepo](_.getAllLecturesToReview)
+    def getAllLecturesToReview: ZIO[LecturesRepo, String, Lectures] = ZIO.serviceWithZIO[LecturesRepo](_.getAllLecturesToReview)
   }
 }

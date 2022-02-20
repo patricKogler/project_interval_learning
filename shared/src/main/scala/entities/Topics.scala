@@ -1,8 +1,6 @@
 package entities
 
-import io.circe.{Decoder, Encoder}
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
-
+import zio.json.*
 
 case class Topics(topics: List[Topic]) {
   def update(raw: List[RawTopic]): Topics = {
@@ -15,7 +13,7 @@ case class Topics(topics: List[Topic]) {
 }
 
 object Topics {
-  given topicEncoder: Encoder[Topics] = deriveEncoder[Topics]
+  given topicEncoder: JsonEncoder[Topics] = DeriveJsonEncoder.gen[Topics]
 
-  given topicDecoder: Decoder[Topics] = deriveDecoder[Topics]
+  given topicDecoder: JsonDecoder[Topics] = DeriveJsonDecoder.gen[Topics]
 }

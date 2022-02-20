@@ -5,6 +5,7 @@ import entities.{AnswerState, Answered, LectureConfig, Question}
 import org.joda.time.{DateTime, Days}
 
 import scala.annotation.tailrec
+import entities.AnswerState._
 
 object question {
 
@@ -19,10 +20,10 @@ object question {
     } else 0
 
   private def answerStateWeight(answerState: AnswerState): Double = answerState match {
-    case AnswerState.Again => 4.0
-    case AnswerState.Hard => 3.0
-    case AnswerState.Good => 2
-    case AnswerState.Easy => 1
+    case Again => 4.0
+    case Hard => 3.0
+    case Good => 2
+    case Easy => 1
   }
 
   def nextLearningDate(question: Question, lectureConfig: LectureConfig): DateTime = {

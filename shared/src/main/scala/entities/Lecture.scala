@@ -1,7 +1,6 @@
 package entities
 
-import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
-import io.circe.{Decoder, Encoder}
+import zio.json.*
 import org.joda.time.DateTime
 import time.helpers.{dateTimeEncoder, dateTimeDecoder}
 
@@ -20,7 +19,7 @@ case class Lecture(lectureConfig: LectureConfig, topics: List[Topic] = List.empt
 }
 
 object Lecture {
-  given lectureEncoder: Encoder[Lecture] = deriveEncoder[Lecture]
+  given lectureEncoder: JsonEncoder[Lecture] = DeriveJsonEncoder.gen[Lecture]
 
-  given lectureDecoder: Decoder[Lecture] = deriveDecoder[Lecture]
+  given lectureDecoder: JsonDecoder[Lecture] = DeriveJsonDecoder.gen[Lecture]
 }

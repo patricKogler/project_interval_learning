@@ -1,8 +1,6 @@
 package entities
 
-import io.circe.{Decoder, Encoder}
-import io.circe.generic.semiauto.*
-import io.circe.syntax.*
+import zio.json.*
 import org.joda.time.DateTime
 import time.helpers.{dateTimeEncoder, dateTimeDecoder}
 import java.util.UUID
@@ -13,7 +11,7 @@ case class Question(question: String, history: List[Answered] = List.empty, id: 
 }
 
 object Question {
-  given questionEncoder: Encoder[Question] = deriveEncoder[Question]
+  given questionEncoder: JsonEncoder[Question] = DeriveJsonEncoder.gen[Question]
 
-  given questionDecoder: Decoder[Question] = deriveDecoder[Question]
+  given questionDecoder: JsonDecoder[Question] = DeriveJsonDecoder.gen[Question]
 }
