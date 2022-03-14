@@ -1,6 +1,6 @@
 package services.topic
 
-import entities.{AnswerState, Lectures, Question, Topic}
+import entities.*
 import services.question.QuestionService
 import zio.*
 import zio.Console

@@ -1,6 +1,6 @@
 package services.topic
 
-import entities.{Lecture, LectureConfig, Lectures, Question, Topic}
+import entities.*
 import helpers.question.getQuestionWeight
 import zio.*
 import zio.Console.printLine

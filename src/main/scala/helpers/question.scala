@@ -1,11 +1,10 @@
 package helpers
 
-import entities.AnswerState.{Again, Easy, Good, Hard}
-import entities.{AnswerState, Answered, LectureConfig, Question}
+import entities.*
+import entities.AnswerState.*
 import org.joda.time.{DateTime, Days}
 
 import scala.annotation.tailrec
-import entities.AnswerState._
 
 object question {
 

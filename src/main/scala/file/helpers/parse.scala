@@ -1,6 +1,5 @@
 package file.helpers
-
-import entities.{LectureConfig, RawLecture, RawTopic}
+import entities.*
 import os.Path
 import providers.path.PathProvider
 import zio.*
@@ -12,8 +11,6 @@ object parse {
   }
 
   case class ParseLive(pathProvider: PathProvider) extends Parse {
-
-    import entities.LectureConfig.lectureConfigDecoder
 
     private case class ParserHelper(mapping: Map[String, List[String]] = Map.empty, current: Option[String] = None) {
       def +(map: (String, List[String])): ParserHelper = this.copy(mapping = this.mapping + map)
@@ -52,7 +49,7 @@ object parse {
       lines.foldLeft(ParserHelper())((helper, line) => {
         if line.startsWith("#") then
           val prefix = line.takeWhile(_ == '#')
-          val current = line.stripPrefix(prefix)
+          val current = line.stripPrefix(prefix).strip()
           helper.setCurrent(current) + (current -> helper.mapping.getOrElse(current, List.empty))
         else
           val lastOption = helper.current

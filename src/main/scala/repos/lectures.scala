@@ -1,7 +1,6 @@
 package repos
 
-import entities.Lectures
-import entities.Lectures.{lecturesDecoder, lecturesEncoder}
+import entities.*
 import zio.json.*
 import providers.path.PathProvider
 import zio.*

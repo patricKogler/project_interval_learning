@@ -3,7 +3,6 @@ package entities
 import zio.json.*
 import org.joda.time.DateTime
 import time.helpers.{dateTimeEncoder, dateTimeDecoder}
-
 case class LectureConfig(name: String, examDate: DateTime)
 
 object LectureConfig {

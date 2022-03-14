@@ -2,9 +2,8 @@ package entities
 
 import zio.json.*
 import org.joda.time.DateTime
-import time.helpers.{dateTimeEncoder, dateTimeDecoder}
 import java.util.UUID
-
+import time.helpers.{dateTimeEncoder, dateTimeDecoder}
 
 case class Question(question: String, history: List[Answered] = List.empty, id: UUID = UUID.randomUUID(), createdAt: DateTime = DateTime.now()) {
   def addAnswerFromState(answerState: AnswerState): Question = this.copy(history = history.appended(Answered(DateTime.now(), answerState)))

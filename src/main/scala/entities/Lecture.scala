@@ -3,7 +3,6 @@ package entities
 import zio.json.*
 import org.joda.time.DateTime
 import time.helpers.{dateTimeEncoder, dateTimeDecoder}
-
 import java.util.UUID
 
 case class Lecture(lectureConfig: LectureConfig, topics: List[Topic] = List.empty, createdAt: DateTime = DateTime.now(), id: UUID = UUID.randomUUID()) {

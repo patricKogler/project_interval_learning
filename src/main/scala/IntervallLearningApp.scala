@@ -4,7 +4,6 @@ import zio.*
 import module.index.{IndexLectures, IndexLecturesLive}
 import os.Path
 import zio.Console.{printLine, readLine}
-import entities.{Question, Topic}
 import providers.path.PathProviderLive
 import repos.lectures.{LecturesRepo, LecturesRepoLive}
 import services.question.QuestionServiceLive
@@ -16,10 +15,6 @@ import scala.io.AnsiColor.*
 import scala.io.Source
 
 object IntervallLearningApp extends zio.ZIOAppDefault {
-
-  import entities.Lectures.{lecturesEncoder, lecturesDecoder}
-
-  //  private val topicsRepoLayer = PathProviderLive.layer >>> TopicsRepoLive.layer
 
   override def run = logic.provide(
     PathProviderLive.layer,

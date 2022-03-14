@@ -1,8 +1,8 @@
 package services
 
-import entities.Question
 import repos.lectures.LecturesRepo
 import zio.*
+import entities.*
 
 object question {
   trait QuestionService {
