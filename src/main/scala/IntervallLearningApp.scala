@@ -41,7 +41,10 @@ object IntervallLearningApp extends zio.ZIOAppDefault {
       helpers.question.nextLearningDate(question, config).isBeforeNow
     })
     _ <- if lecturesToReview.lectures.nonEmpty
-    then UserSelection.getSelection(lecturesToReview).map(UserReviewService.review)
+    then for {
+        lectures <- UserSelection.getSelection(lecturesToReview)
+        _ <- UserReviewService.review(lectures)
+      } yield ()
     else printLine("Nothing to review")
   } yield ()
 }

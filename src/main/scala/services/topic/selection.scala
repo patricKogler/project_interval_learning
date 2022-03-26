@@ -86,7 +86,6 @@ object selection {
       s = lecturesToString(lectures)
       _ <- console.printLine(s).mapError(_.toString)
       selection <- console.readLine.mapBoth(_.toString, s => filterBySelectionString(s, lectures))
-      _ <- console.printLine(selection.toString()).mapError(_.toString)
     } yield lectures.filterByQuestion((q, _) => selection.flatMap({
       case lecture: Lecture => lecture.topics.flatMap(_.getAllQuestions)
       case topic: Topic => topic.getAllQuestions

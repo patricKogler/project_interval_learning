@@ -56,10 +56,8 @@ object review {
             _ <- console.printLine("  1        2       3       4 ").mapError(_.toString)
             answer <- console.readLine.mapError(_.toString)
             _ <- saveAnswer(answer, head)
-            _ <- clear
             _ <- console.printLine("Next Question? [y]/n").when(next.nonEmpty).mapError(_.toString)
             nextQuestion <- if next.nonEmpty then console.readLine.mapBoth(_.toString, _ != "n") else IO.succeed(false)
-            _ <- clear
             _ <- helper(next).when(nextQuestion)
           } yield ()
           case Nil => IO.unit
@@ -69,7 +67,9 @@ object review {
       helper(questions)
     }
 
-    override def review(lectures: Lectures): IO[String, Unit] = questionAsker(lectures)
+    override def review(lectures: Lectures): IO[String, Unit] = for {
+      _ <- questionAsker(lectures)
+    } yield ()
   }
 
   object UserReviewServiceLive {
